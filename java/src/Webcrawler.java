@@ -23,10 +23,13 @@ public class Webcrawler implements Runnable{
         System.out.println("Starting Webcrawler " + val);
     }
 
-    //@TODO: function: write HTML to file
+    //@TODO: function: write HTML document to stored file
+
+    //@TODO: function: write HTML statistics to output file
 
     //@TODO: function: parse HTML for title, links, images
     // (?) - May need to write a separate class?
+    // see: http://jsoup.org/cookbook/extracting-data/example-list-links
 
     //@TODO function: return Arraylist of new URLs to global list
 
