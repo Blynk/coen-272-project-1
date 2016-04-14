@@ -1,3 +1,9 @@
+import org.jsoup.Connection;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
+
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -105,7 +111,7 @@ public class Webcrawler implements Runnable{
     		domain=input[2];
     		domainLimit=true;
     	}
-    	Connection.Response response=Jsoup.connect(seedURL).execute();
+    	Connection.Response response= Jsoup.connect(seedURL).execute();
     	responseCode = response.statusCode();
     	Document doc= Jsoup.connect(seedURL).get();
     	Elements imgArr=doc.getElementsByTag("img");
