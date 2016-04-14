@@ -20,6 +20,8 @@ public class OutputWriter {
     public void initStore(){
         Path toDir = Paths.get("").toAbsolutePath();
         this.docStore = Paths.get(toDir.toString(), "HTMLDocStore");
+        if(Files.exists(this.docStore, LinkOption.NOFOLLOW_LINKS))
+            return;
         try {
             Files.createDirectory(this.docStore);
         } catch (FileAlreadyExistsException fe){
@@ -35,7 +37,6 @@ public class OutputWriter {
     public void writeHTMLToFile() {
         String toFile = page.outerHtml();
         Path newFile  = Paths.get(this.docStore.toString(), page.title() + ".html");
-
         try {
             Files.write(newFile, toFile.getBytes(), StandardOpenOption.CREATE_NEW);
         } catch (IOException e) {

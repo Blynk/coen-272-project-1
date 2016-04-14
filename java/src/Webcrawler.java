@@ -93,6 +93,38 @@ public class Webcrawler implements Runnable{
     // (?) - May need to write a separate class?
     // -- Might be able to follow this example:
     // see: http://jsoup.org/cookbook/extracting-data/example-list-links
+        public static void parseHTML(String[] input) throws IOException{
+    	int links;
+    	int responseCode;
+    	int imgs; //still need to output the links/responseCode/imgs
+    	String domain=null;
+    	boolean domainLimit=false;
+    	String seedURL= input[0];
+    	int limit= Integer.parseInt(input[1]);
+    	if(input.length>2){
+    		domain=input[2];
+    		domainLimit=true;
+    	}
+    	Connection.Response response=Jsoup.connect(seedURL).execute();
+    	responseCode = response.statusCode();
+    	Document doc= Jsoup.connect(seedURL).get();
+    	Elements imgArr=doc.getElementsByTag("img");
+    	imgs=imgArr.size();
+    	Elements linkArr= doc.select("a[href]");
+    	links=linkArr.size();
+    	for (Element e:linkArr){
+    		String href = linkArr.attr("abs:href");
+    		String[] s= {href, Integer.toString(limit) ,domain};
+    		if(domainLimit){
+    			if(e.attr("href").contains(domain)){
+    				parseHTML(s);
+    			}
+    		}else{
+    			parseHTML(s);
+    		}
+    		
+    	}
+    }
 
     //@TODO function: return Arraylist of new URLs to global list
 
@@ -101,11 +133,5 @@ public class Webcrawler implements Runnable{
         for (URL url : newURLs) {
 
         }
-    }
-
-    public static void main(String[] args) {
-        Webcrawler w = new Webcrawler();
-        w.init(readArgs(args[0]));
-        w.run();
     }
 }
