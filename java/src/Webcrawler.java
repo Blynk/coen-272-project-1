@@ -13,11 +13,11 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Hashtable;
 
-public class Webcrawler implements Runnable{
+public class Webcrawler {
 
     // List of URLs to crawl through
-    private ArrayList<URL> newURLs;
-    private Hashtable<URL,Integer> oldURLs;
+    private ArrayList<String> newURLs;
+    private Hashtable<String,Integer> oldURLs;
     private int maxToCrawl;
     private URL domain;
     private boolean domainSet;
@@ -35,16 +35,16 @@ public class Webcrawler implements Runnable{
             return;
         }
 
-        URL seedURL;
+        URL seedURL = null;
         try {
             seedURL = new URL(args[0]);
         } catch (MalformedURLException e) {
             e.printStackTrace();
-            System.out.println("Invalid Seed URL given.");
-            return;
+            System.out.println("Invalid seed URL given");
         }
-        this.newURLs.add(seedURL);
-        this.oldURLs.put(seedURL, 1);
+
+        this.newURLs.add(args[0]);
+        this.oldURLs.put(args[0], 1);
         this.maxToCrawl = Integer.parseInt(args[1]);
         if(args.length > 2){
             try {
@@ -90,11 +90,6 @@ public class Webcrawler implements Runnable{
 
     // @TODO: get and parse robots.txt file
 
-
-    //@TODO: function: write HTML document to stored file
-
-    //@TODO: function: write HTML statistics to output file
-
     //@TODO: function: parse HTML for title, links, # of images
     // (?) - May need to write a separate class?
     // -- Might be able to follow this example:
@@ -133,11 +128,24 @@ public class Webcrawler implements Runnable{
     }
 
     //@TODO function: return Arraylist of new URLs to global list
+    // (also needs to check knownURLs before adding)
+    public void addURLs(Elements elements) {
+        for(Element link : elements){
+            String newLink = link.attr("href");
+            if(!oldURLs.contains(newLink)){
+                newURLs.add(newLink);
+            }
+        }
+    }
 
-    @Override
+    public int checkResponse(Connection.Response response){
+        return response.statusCode();
+    }
+
+    /*@Override
     public void run() {
         for (URL url : newURLs) {
 
         }
-    }
+    }*/
 }

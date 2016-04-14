@@ -6,6 +6,8 @@ import java.io.IOException;
 /**
  * Created by dobatake on 4/13/16.
  */
+
+/* Class for Testing Output Writer class */
 public class GetPage {
     public static void main(String[] args) {
         try {
@@ -13,7 +15,8 @@ public class GetPage {
             String title = doc.title();
             System.out.println("Title: " + title);
 
-            OutputWriter ow = new OutputWriter(doc);
+            OutputWriter ow = new OutputWriter();
+            ow.setPage(doc);
             ow.initStore();
             ow.writeHTMLToFile();
         } catch (IOException e) {
