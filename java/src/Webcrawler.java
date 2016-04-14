@@ -29,6 +29,7 @@ public class Webcrawler implements Runnable{
 
     //@TODO: function: parse HTML for title, links, images
     // (?) - May need to write a separate class?
+    // -- Might be able to follow this example:
     // see: http://jsoup.org/cookbook/extracting-data/example-list-links
 
     //@TODO function: return Arraylist of new URLs to global list
