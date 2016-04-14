@@ -4,10 +4,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -21,6 +18,8 @@ public class Webcrawler {
     private int maxToCrawl;
     private URL domain;
     private boolean domainSet;
+    private OutputWriter outputWriter;
+    private Hashtable<String, ArrayList<String>> disallowedLists;
 
 
     //Function: Initialization of all class variables
@@ -29,6 +28,7 @@ public class Webcrawler {
     public void init(String [] args){
         this.newURLs = new ArrayList<>();
         this.oldURLs = new Hashtable<>();
+        this.disallowedLists = new Hashtable<>();
 
         if(args.length < 2){
             System.out.println("Not enough arguments given!");
@@ -89,31 +89,72 @@ public class Webcrawler {
     }
 
     // @TODO: get and parse robots.txt file
+    public void parseRobots(String location) {
+        String hostUrl;
+        ArrayList<String> disallows = new ArrayList<>();
+        try {
+            hostUrl = new URL(location).getHost();
+            BufferedReader br = new BufferedReader(new InputStreamReader(new URL(hostUrl + "/robots.txt").openStream()));
+            String line;
+            while ((line = br.readLine()) != null) {
+                if (line.indexOf("Disallow:") == 0) {
+                    String disallowed = line.substring("Disallow:".length());
+
+                    int commentIndex = disallowed.indexOf("#");
+                    if (commentIndex != -1) {
+                        disallowed = disallowed.substring(0, commentIndex);
+                    }
+                    // Add disallow rule
+                    disallows.add(disallowed.trim());
+                }
+            }
+            this.disallowedLists.put(hostUrl, disallows);
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+            // Not able to resolve robots.txt -- do not parse
+            return;
+        } catch (IOException e) {
+            e.printStackTrace();
+            // No robots.txt found -- Ok.
+            return;
+        }
+    }
+
+    public boolean checkRobots(String location, String host){
+        ArrayList<String> ruleList = disallowedLists.get(host);
+        for(int i=0; i<ruleList.size(); i++){
+            if(location.startsWith(ruleList.get(i))){
+                return false;
+            }
+        }
+        return true;
+    }
 
     //@TODO: function: parse HTML for title, links, # of images
     // (?) - May need to write a separate class?
     // -- Might be able to follow this example:
     // see: http://jsoup.org/cookbook/extracting-data/example-list-links
         public static void parseHTML(String[] input) throws IOException{
-    	int links;
-    	int responseCode;
-    	int imgs; //still need to output the links/responseCode/imgs
-    	String domain=null;
-    	boolean domainLimit=false;
-    	String seedURL= input[0];
-    	int limit= Integer.parseInt(input[1]);
-    	if(input.length>2){
-    		domain=input[2];
-    		domainLimit=true;
-    	}
-    	Connection.Response response= Jsoup.connect(seedURL).execute();
-    	responseCode = response.statusCode();
-    	Document doc= Jsoup.connect(seedURL).get();
-    	Elements imgArr=doc.getElementsByTag("img");
-    	imgs=imgArr.size();
-    	Elements linkArr= doc.select("a[href]");
-    	links=linkArr.size();
-    	for (Element e:linkArr){
+    	    int links;
+    	    int responseCode;
+    	    int imgs; //still need to output the links/responseCode/imgs
+    	    String domain=null;
+    	    boolean domainLimit=false;
+    	    String seedURL= input[0];
+    	    int limit= Integer.parseInt(input[1]);
+    	    if(input.length>2){
+    		    domain=input[2];
+    		    domainLimit=true;
+    	    }
+    	    Connection.Response response= Jsoup.connect(seedURL).execute();
+            responseCode = response.statusCode();
+            Document doc= Jsoup.connect(seedURL).get();
+            Elements imgArr=doc.getElementsByTag("img");
+            imgs=imgArr.size();
+            Elements linkArr= doc.select("a[href]");
+            links=linkArr.size();
+
+    	/*for (Element e:linkArr){
     		String href = linkArr.attr("abs:href");
     		String[] s= {href, Integer.toString(limit) ,domain};
     		if(domainLimit){
@@ -124,7 +165,7 @@ public class Webcrawler {
     			parseHTML(s);
     		}
     		
-    	}
+    	}*/
     }
 
     //@TODO function: return Arraylist of new URLs to global list
