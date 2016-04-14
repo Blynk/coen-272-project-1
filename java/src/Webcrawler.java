@@ -82,12 +82,14 @@ public class Webcrawler implements Runnable{
         return null;
     }
 
+    // @TODO: get and parse robots.txt file
+
 
     //@TODO: function: write HTML document to stored file
 
     //@TODO: function: write HTML statistics to output file
 
-    //@TODO: function: parse HTML for title, links, images
+    //@TODO: function: parse HTML for title, links, # of images
     // (?) - May need to write a separate class?
     // -- Might be able to follow this example:
     // see: http://jsoup.org/cookbook/extracting-data/example-list-links
@@ -97,7 +99,13 @@ public class Webcrawler implements Runnable{
     @Override
     public void run() {
         for (URL url : newURLs) {
-            
+
         }
+    }
+
+    public static void main(String[] args) {
+        Webcrawler w = new Webcrawler();
+        w.init(readArgs(args[0]));
+        w.run();
     }
 }
