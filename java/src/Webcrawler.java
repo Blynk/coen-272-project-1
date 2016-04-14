@@ -1,27 +1,87 @@
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
+import java.util.Hashtable;
 
 public class Webcrawler implements Runnable{
 
     // List of URLs to crawl through
-    private ArrayList<String> URLqueue;
-    // Current webpage connected
-    Document doc;
-    // List of new URLs to be returned
-    private ArrayList<String> newURLs;
+    private ArrayList<URL> newURLs;
+    private Hashtable<URL,Integer> oldURLs;
+    private int maxToCrawl;
+    private URL domain;
+    private boolean domainSet;
 
-    /*
-        Need to pass a list of URLs to each web crawler
-            - issue(?) If multi-threaded, may need to lock global list
-                depending on size of queue..?
-     */
-    Webcrawler(ArrayList<String> queue, int val){
-        URLqueue = queue;
-        System.out.println("Starting Webcrawler " + val);
+
+    //Function: Initialization of all class variables
+    //Input: string array of arguments from readArgs
+    //Output: none
+    public void init(String [] args){
+        this.newURLs = new ArrayList<>();
+        this.oldURLs = new Hashtable<>();
+
+        if(args.length < 2){
+            System.out.println("Not enough arguments given!");
+            return;
+        }
+
+        URL seedURL;
+        try {
+            seedURL = new URL(args[0]);
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+            System.out.println("Invalid Seed URL given.");
+            return;
+        }
+        this.newURLs.add(seedURL);
+        this.oldURLs.put(seedURL, 1);
+        this.maxToCrawl = Integer.parseInt(args[1]);
+        if(args.length > 2){
+            try {
+                this.domain = new URL(args[2]);
+                this.domainSet = true;
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+                System.out.println("Invalid domain given");
+            }
+        }
+        else
+            this.domainSet = false;
     }
+    //Function: read in arguments from .csv file
+    // Input: string denoting location of .csv file
+    // Return: string array containing seedURL, pages to crawl, (optional) domain restriction
+    public static String[] readArgs(String csvFile){
+        BufferedReader br = null;
+        String line;
+        String[] args;
+        try {
+            br = new BufferedReader(new FileReader(csvFile));
+            if((line = br.readLine()) != null) {
+                args = line.split(",");
+                return args;
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+            System.out.println("Invalid file or file not found.");
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.out.println("Unable to read file");
+        } finally {
+            if(br != null)
+                try {
+                    br.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+        }
+        return null;
+    }
+
 
     //@TODO: function: write HTML document to stored file
 
@@ -36,17 +96,8 @@ public class Webcrawler implements Runnable{
 
     @Override
     public void run() {
-        try {
-            for (String url : URLqueue) {
-                //Connect and scrape webpage
-                doc = Jsoup.connect(url).get();
-                // Sleep for 30 seconds
-                Thread.sleep(30000);
-            }
-        } catch (IOException ie) {
-            ie.printStackTrace();
-        } catch (InterruptedException ie){
-            ie.printStackTrace();
+        for (URL url : newURLs) {
+            
         }
     }
 }
