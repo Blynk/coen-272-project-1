@@ -103,4 +103,20 @@ public class OutputWriter {
             e.printStackTrace();
         }
     }
+
+    public void writeErrorPage(String location, int responseCode){
+        File reportFile = new File(reportPath.toString());
+        Document reportDoc;
+        try {
+            reportDoc = Jsoup.parse(reportFile, "UTF-8");
+            Element bodyDiv = reportDoc.select("div").first();
+            bodyDiv.append("<h1><a href="+ page.location() + ">" + page.title() +"</a></h1>");
+            bodyDiv.append("<p>Response Code Found: " + responseCode + "</p>");
+
+            Files.write(this.reportPath, reportDoc.toString().getBytes(), StandardOpenOption.TRUNCATE_EXISTING);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 }

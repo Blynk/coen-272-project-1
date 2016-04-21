@@ -15,7 +15,7 @@ public class Webcrawler {
     private Queue<String> newURLs;
     private Hashtable<String,Integer> oldURLs;
     private int maxToCrawl;
-    private URL domain;
+    private String domain;
     private boolean domainSet;
     private OutputWriter outputWriter;
     private Hashtable<String, ArrayList<String>> disallowedLists;
@@ -47,7 +47,8 @@ public class Webcrawler {
         this.maxToCrawl = Integer.parseInt(args[1]);
         if(args.length > 2){
             try {
-                this.domain = new URL(args[2]);
+                URL hostDomain = new URL(args[2]);
+                this.domain = hostDomain.getHost();
                 this.domainSet = true;
             } catch (MalformedURLException e) {
                 e.printStackTrace();
@@ -57,6 +58,52 @@ public class Webcrawler {
         else
             this.domainSet = false;
     }
+
+    // Parses HTML page
+    // Either writes HTML doc to store (if 200)
+    // Else writes response code (does not parse HTML)
+    public void parseHTML(String input) throws IOException{
+        int links;
+        int responseCode;
+        int imgs;
+
+        Connection.Response response = Jsoup.connect(input)
+                .userAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_4) " +
+                        "AppleWebKit/537.36 (KHTML, like Gecko) " +
+                        "Chrome/49.0.2623.112 Safari/537.36")
+
+                .timeout(0)
+                .execute();
+        responseCode = response.statusCode();
+        if(responseCode == 200) {
+            Document doc = response.parse();
+            Elements imgArr = doc.getElementsByTag("img");
+            imgs = imgArr.size();
+            Elements linkArr = doc.select("a[href]");
+            links = linkArr.size();
+
+            this.outputWriter.setPage(doc);
+            this.outputWriter.writeHTMLStats(links, imgs);
+            addURLs(linkArr);
+        }
+        else{
+            System.out.println("Status Code: " + responseCode);
+            this.outputWriter.writeErrorPage(input, responseCode);
+        }
+    	/*for (Element e:linkArr){
+    		String href = linkArr.attr("abs:href");
+    		String[] s= {href, Integer.toString(limit) ,domain};
+    		if(domainLimit){
+    			if(e.attr("href").contains(domain)){
+    				parseHTML(s);
+    			}
+    		}else{
+    			parseHTML(s);
+    		}
+
+    	}*/
+    }
+
     //Function: read in arguments from .csv file
     // Input: string denoting location of .csv file
     // Return: string array containing seedURL, pages to crawl, (optional) domain restriction
@@ -130,77 +177,59 @@ public class Webcrawler {
         return true;
     }
 
-    //@TODO: function: parse HTML for title, links, # of images
-    // (?) - May need to write a separate class?
-    // -- Might be able to follow this example:
-    // see: http://jsoup.org/cookbook/extracting-data/example-list-links
-        public void parseHTML(String input) throws IOException{
-    	    int links;
-    	    int responseCode;
-    	    int imgs; //still need to output the links/responseCode/imgs
-
-    	    //Connection.Response response= Jsoup.connect(input).execute();
-            //responseCode = response.statusCode();
-            Document doc= Jsoup.connect(input).get();
-            Elements imgArr=doc.getElementsByTag("img");
-            imgs=imgArr.size();
-            Elements linkArr= doc.select("a[href]");
-            links=linkArr.size();
-
-            this.outputWriter.setPage(doc);
-            this.outputWriter.writeHTMLStats(links, imgs);
-            addURLs(linkArr);
-
-    	/*for (Element e:linkArr){
-    		String href = linkArr.attr("abs:href");
-    		String[] s= {href, Integer.toString(limit) ,domain};
-    		if(domainLimit){
-    			if(e.attr("href").contains(domain)){
-    				parseHTML(s);
-    			}
-    		}else{
-    			parseHTML(s);
-    		}
-    		
-    	}*/
-    }
-
-    //@TODO function: return Arraylist of new URLs to global list
-    // (also needs to check knownURLs before adding)
+    // Add new URLs to the frontier
+    // Checks for domain (if set)
+    // Checks crawled URLs before adding to the frontier
     public void addURLs(Elements elements) {
         for(Element link : elements){
             String newLink = link.attr("href");
+            if(domainSet && !newLink.contains(domain)){
+                continue;
+            }
             if(!oldURLs.contains(newLink)){
                 newURLs.add(newLink);
             }
         }
     }
 
-    public int checkResponse(Connection.Response response){
-        return response.statusCode();
-    }
-
     public void run() {
         for (int i = 0; i<this.maxToCrawl; i++) {
             try {
+                // Remove first URL from queue
                 String loc = newURLs.poll();
                 if(loc == null){
                     System.out.println("No more URLs to crawl");
                     System.out.println("Pages Crawled: " + i);
                     return;
                 }
+                // Check if the URL can be resolved, then get the base host of the page
                 String host = new URL(loc).getHost();
+                // Check if the robots.txt has been parsed for rules
                 if(!disallowedLists.contains(host)){
+                    // If not, we parse for rules and add to the list
                     parseRobots(host);
                 }
+                // Check if the host allows parsing of the current page
                 if(checkRobots(loc, host)){
+                    // We can parse, so add URL to list of crawled URLs
+                    oldURLs.put(loc, 1);
+                    // Parse the HTML page
                     parseHTML(loc);
+                }
+                // Peek at next URL in list,
+                // If the next URL has the same host,
+                // We need to wait for a small amount of time before continuing
+                // Otherwise, another web server will serve us
+                if(newURLs.peek().contains(host)) {
+                    wait(30000);        // Wait for 30 seconds to
                 }
             } catch (MalformedURLException e) {
                 e.printStackTrace();
                 System.out.println("URL could not be resolved");
                 continue;
             } catch (IOException e) {
+                e.printStackTrace();
+            } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
