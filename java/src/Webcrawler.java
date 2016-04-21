@@ -7,13 +7,12 @@ import org.jsoup.select.Elements;
 import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Hashtable;
+import java.util.*;
 
 public class Webcrawler {
 
     // List of URLs to crawl through
-    private ArrayList<String> newURLs;
+    private Queue<String> newURLs;
     private Hashtable<String,Integer> oldURLs;
     private int maxToCrawl;
     private URL domain;
@@ -26,7 +25,7 @@ public class Webcrawler {
     //Input: string array of arguments from readArgs
     //Output: none
     public void init(String [] args){
-        this.newURLs = new ArrayList<>();
+        this.newURLs = new ArrayDeque<>();
         this.oldURLs = new Hashtable<>();
         this.disallowedLists = new Hashtable<>();
 
@@ -97,6 +96,7 @@ public class Webcrawler {
             BufferedReader br = new BufferedReader(new InputStreamReader(new URL(hostUrl + "/robots.txt").openStream()));
             String line;
             while ((line = br.readLine()) != null) {
+                // We'll assume that any disallow rule applies to us
                 if (line.indexOf("Disallow:") == 0) {
                     String disallowed = line.substring("Disallow:".length());
 
@@ -134,25 +134,22 @@ public class Webcrawler {
     // (?) - May need to write a separate class?
     // -- Might be able to follow this example:
     // see: http://jsoup.org/cookbook/extracting-data/example-list-links
-        public static void parseHTML(String[] input) throws IOException{
+        public void parseHTML(String input) throws IOException{
     	    int links;
     	    int responseCode;
     	    int imgs; //still need to output the links/responseCode/imgs
-    	    String domain=null;
-    	    boolean domainLimit=false;
-    	    String seedURL= input[0];
-    	    int limit= Integer.parseInt(input[1]);
-    	    if(input.length>2){
-    		    domain=input[2];
-    		    domainLimit=true;
-    	    }
-    	    Connection.Response response= Jsoup.connect(seedURL).execute();
-            responseCode = response.statusCode();
-            Document doc= Jsoup.connect(seedURL).get();
+
+    	    //Connection.Response response= Jsoup.connect(input).execute();
+            //responseCode = response.statusCode();
+            Document doc= Jsoup.connect(input).get();
             Elements imgArr=doc.getElementsByTag("img");
             imgs=imgArr.size();
             Elements linkArr= doc.select("a[href]");
             links=linkArr.size();
+
+            this.outputWriter.setPage(doc);
+            this.outputWriter.writeHTMLStats(links, imgs);
+            addURLs(linkArr);
 
     	/*for (Element e:linkArr){
     		String href = linkArr.attr("abs:href");
@@ -183,10 +180,29 @@ public class Webcrawler {
         return response.statusCode();
     }
 
-    /*@Override
     public void run() {
-        for (URL url : newURLs) {
-
+        for (int i = 0; i<this.maxToCrawl; i++) {
+            try {
+                String loc = newURLs.poll();
+                if(loc == null){
+                    System.out.println("No more URLs to crawl");
+                    System.out.println("Pages Crawled: " + i);
+                    return;
+                }
+                String host = new URL(loc).getHost();
+                if(!disallowedLists.contains(host)){
+                    parseRobots(host);
+                }
+                if(checkRobots(loc, host)){
+                    parseHTML(loc);
+                }
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+                System.out.println("URL could not be resolved");
+                continue;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
-    }*/
+    }
 }

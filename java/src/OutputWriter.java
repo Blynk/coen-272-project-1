@@ -22,6 +22,7 @@ public class OutputWriter {
         this.page = d;
     }
 
+    // Call this method when starting program...
     public void initStore(){
         Path toDir = Paths.get("").toAbsolutePath();
         this.docStore = Paths.get(toDir.toString(), "HTMLDocStore");
@@ -37,8 +38,12 @@ public class OutputWriter {
         }
 
         System.out.println("Created document store: " + this.docStore.toString());
+        constructHTML();
+        System.out.println("Created Report.html: " + this.reportPath.toString());
     }
 
+    // Takes HTML Document from crawler and stores it
+    // Sanity Check: Need to set page before calling this method
     public void writeHTMLToFile() {
         String toFile = page.outerHtml();
         Path newFile  = Paths.get(this.docStore.toString(), page.title() + ".html");
@@ -50,13 +55,8 @@ public class OutputWriter {
         System.out.println("Stored page: " + page.title() + " in: " + newFile.toString());
     }
 
-    //Function: Write statistics to report.html
-    // Input: String of HTML to write to file
-    public void writeStatistics(String html){
-
-    }
-
-    // @TODO: Function to start and end report.html w/ opening and closing tags
+    // Initializes report.html w/ proper opening and closing tags
+    // Call this method at the beginning of the program!
     public void constructHTML(){
         Html html = new Html();
         Head head = new Head();
@@ -74,6 +74,8 @@ public class OutputWriter {
 
         String toWrite = html.write();
         reportPath = Paths.get(this.docStore.toString(), "..", "report.html");
+        if(Files.exists(reportPath, LinkOption.NOFOLLOW_LINKS))
+            return; // Report.html exists, return
         try {
             Files.write(this.reportPath, toWrite.getBytes("UTF-8"), StandardOpenOption.CREATE);
         } catch (IOException e) {
@@ -81,7 +83,10 @@ public class OutputWriter {
         }
     }
 
-    // @TODO: Function to construct HTML from page statistics
+    // Opens Current report.html and then appends new statistics to the report
+    // Sanity Check: Need to verify that report.html exists!
+    //      --> Call contstructHTML method at the beginning of the program!!
+    // @TODO: Need to think about changing method from per page processing to batch processing to reduce file I/O
     public void writeHTMLStats(int nLinks, int nImgs){
         File reportFile = new File(reportPath.toString());
         Document reportDoc;
