@@ -8,6 +8,7 @@ import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 public class Webcrawler {
 
@@ -28,6 +29,7 @@ public class Webcrawler {
         this.newURLs = new ArrayDeque<>();
         this.oldURLs = new Hashtable<>();
         this.disallowedLists = new Hashtable<>();
+        this.outputWriter = new OutputWriter();
 
         if(args.length < 2){
             System.out.println("Not enough arguments given!");
@@ -57,6 +59,8 @@ public class Webcrawler {
         }
         else
             this.domainSet = false;
+
+        this.outputWriter.initStore();
     }
 
     // Parses HTML page
@@ -77,12 +81,14 @@ public class Webcrawler {
         responseCode = response.statusCode();
         if(responseCode == 200) {
             Document doc = response.parse();
+            System.out.println("Page Retrieved: " + doc.location());
             Elements imgArr = doc.getElementsByTag("img");
             imgs = imgArr.size();
             Elements linkArr = doc.select("a[href]");
             links = linkArr.size();
 
             this.outputWriter.setPage(doc);
+            this.outputWriter.writeHTMLToFile();
             this.outputWriter.writeHTMLStats(links, imgs);
             addURLs(linkArr);
         }
@@ -134,12 +140,10 @@ public class Webcrawler {
         return null;
     }
 
-    // @TODO: get and parse robots.txt file
-    public void parseRobots(String location) {
-        String hostUrl;
+    public void parseRobots(String hostUrl) {
+        int numRules = 0;
         ArrayList<String> disallows = new ArrayList<>();
         try {
-            hostUrl = new URL(location).getHost();
             BufferedReader br = new BufferedReader(new InputStreamReader(new URL(hostUrl + "/robots.txt").openStream()));
             String line;
             while ((line = br.readLine()) != null) {
@@ -153,9 +157,11 @@ public class Webcrawler {
                     }
                     // Add disallow rule
                     disallows.add(disallowed.trim());
+                    numRules++;
                 }
             }
             this.disallowedLists.put(hostUrl, disallows);
+            System.out.println(numRules + " Rules added for: " + hostUrl);
         } catch (MalformedURLException e) {
             e.printStackTrace();
             // Not able to resolve robots.txt -- do not parse
@@ -181,6 +187,7 @@ public class Webcrawler {
     // Checks for domain (if set)
     // Checks crawled URLs before adding to the frontier
     public void addURLs(Elements elements) {
+        int URLsAdded = 0;
         for(Element link : elements){
             String newLink = link.attr("href");
             if(domainSet && !newLink.contains(domain)){
@@ -188,8 +195,10 @@ public class Webcrawler {
             }
             if(!oldURLs.contains(newLink)){
                 newURLs.add(newLink);
+                URLsAdded++;
             }
         }
+        System.out.println(URLsAdded + " URLs added to the list");
     }
 
     public void run() {
@@ -202,15 +211,17 @@ public class Webcrawler {
                     System.out.println("Pages Crawled: " + i);
                     return;
                 }
-                // Check if the URL can be resolved, then get the base host of the page
-                String host = new URL(loc).getHost();
+                // Check if the URL can be resolved, then get the domain URL of the page
+                URL location = new URL(loc);
+                String hostUrl = location.getProtocol();
+                hostUrl += "://" + location.getHost();
                 // Check if the robots.txt has been parsed for rules
-                if(!disallowedLists.contains(host)){
+                if(!disallowedLists.containsKey(hostUrl)){
                     // If not, we parse for rules and add to the list
-                    parseRobots(host);
+                    parseRobots(hostUrl);
                 }
                 // Check if the host allows parsing of the current page
-                if(checkRobots(loc, host)){
+                if(checkRobots(loc, hostUrl)){
                     // We can parse, so add URL to list of crawled URLs
                     oldURLs.put(loc, 1);
                     // Parse the HTML page
@@ -220,12 +231,13 @@ public class Webcrawler {
                 // If the next URL has the same host,
                 // We need to wait for a small amount of time before continuing
                 // Otherwise, another web server will serve us
-                if(newURLs.peek().contains(host)) {
-                    wait(30000);        // Wait for 30 seconds to
+                if(newURLs.peek().contains(hostUrl)) {
+                    TimeUnit.SECONDS.sleep(10);        // Wait for 10 seconds to
                 }
             } catch (MalformedURLException e) {
                 e.printStackTrace();
                 System.out.println("URL could not be resolved");
+                i--;
                 continue;
             } catch (IOException e) {
                 e.printStackTrace();

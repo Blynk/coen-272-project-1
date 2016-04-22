@@ -26,7 +26,9 @@ public class OutputWriter {
     public void initStore(){
         Path toDir = Paths.get("").toAbsolutePath();
         this.docStore = Paths.get(toDir.toString(), "HTMLDocStore");
+        constructHTML();
         if(Files.exists(this.docStore, LinkOption.NOFOLLOW_LINKS))
+
             return;
         try {
             Files.createDirectory(this.docStore);
@@ -36,10 +38,7 @@ public class OutputWriter {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
         System.out.println("Created document store: " + this.docStore.toString());
-        constructHTML();
-        System.out.println("Created Report.html: " + this.reportPath.toString());
     }
 
     // Takes HTML Document from crawler and stores it
@@ -73,14 +72,16 @@ public class OutputWriter {
         body.appendChild(bodyDiv);
 
         String toWrite = html.write();
-        reportPath = Paths.get(this.docStore.toString(), "..", "report.html");
-        if(Files.exists(reportPath, LinkOption.NOFOLLOW_LINKS))
-            return; // Report.html exists, return
+        this.reportPath = Paths.get(this.docStore.toString(), "..", "report.html").normalize();
         try {
-            Files.write(this.reportPath, toWrite.getBytes("UTF-8"), StandardOpenOption.CREATE);
+            // Create report.html,
+            // if already found, it was found from a previous run, so truncate.
+            Files.write(this.reportPath, toWrite.getBytes("UTF-8"),
+                    StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
         } catch (IOException e) {
             e.printStackTrace();
         }
+        System.out.println("Created Report.html: " + this.reportPath.toString());
     }
 
     // Opens Current report.html and then appends new statistics to the report
@@ -88,13 +89,13 @@ public class OutputWriter {
     //      --> Call contstructHTML method at the beginning of the program!!
     // @TODO: Need to think about changing method from per page processing to batch processing to reduce file I/O
     public void writeHTMLStats(int nLinks, int nImgs){
-        File reportFile = new File(reportPath.toString());
+        File reportFile = new File(this.reportPath.toString());
         Document reportDoc;
         try {
             reportDoc = Jsoup.parse(reportFile, "UTF-8");
             Element bodyDiv = reportDoc.select("div").first();
             bodyDiv.append("<h1><a href="+ page.location() + ">" + page.title() +"</a></h1>");
-            bodyDiv.append("<p>Cached Version: <a href="+ docStore + ">" + page.title() + "</a></p>");
+            bodyDiv.append("<p>Cached Version: <a href="+ docStore + "/" +page.title() + ".html>" + page.title() + "</a></p>");
             bodyDiv.append("<p>Number of Links: " + nLinks + "</p>");
             bodyDiv.append("<p>Number of Images: " + nImgs + "</p>");
 
