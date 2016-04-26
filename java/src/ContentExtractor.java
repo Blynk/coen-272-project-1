@@ -16,26 +16,17 @@ public class ContentExtractor {
 	HashMap<Tag, ArrayList<TagInfo>> map;
 	String title;
 	Elements elements;
-	//TODO: need to iterate over repository to get all files
 
 	public ContentExtractor(String path){
 		map= new HashMap<Tag, ArrayList<TagInfo>>();
 		Document doc=Jsoup.parse(path);
 		this.doc=doc;
-	}
-	public void getTitle(){
-		title=doc.select("title").text();
-	}
-	public void bodyProcessor(Document doc){
-//		//filter the doc
-//		String html = doc.html();
-//		String clean=Jsoup.clean(html, Whitelist.basic());
-//		//remove extra spaces
-//		clean=clean.replaceAll("&nbsp", " ");
 		
-//		System.out.println(clean); //for testing
-		
-		doc.select("script,noscript,style,iframe,br").remove(); //from webCollector on github
+	}
+	 
+	public void bodyProcessor(){		
+		doc.select("*:matchesOwn((?is) )").remove(); //remove &nbsp;
+		doc.select("script,noscript,style,iframe,br,a,nav").remove(); 
 		
 		elements=doc.body().select("*");
 		
@@ -58,6 +49,8 @@ public class ContentExtractor {
 			}
 			
 		}
+		removeNoise();
+		finalContent();
 	}
 	void removeNoise(){
 		//TODO: remove noise based on the length of content under each tag
@@ -68,10 +61,14 @@ public class ContentExtractor {
 			for(TagInfo entry:arr){
 				if(entry.getLength()<4){ //just come up with this number, need more discuss on that
 					int index=entry.getPos();
-					elements.get(index).text(""); //should be able to set text to "", not sure about this yet
+					elements.get(index).remove();
 				}
 			}
 		}
+//		String html = doc.html();
+//		String clean=Jsoup.clean(html, Whitelist.basic());
+//		//remove extra spaces
+//		clean=clean.replaceAll("&nbsp", " ");
 	}
 	void finalContent(){
 		//TODO: generate final text and output title and processed body to file
