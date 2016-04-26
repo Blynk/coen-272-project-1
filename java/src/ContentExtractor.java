@@ -21,8 +21,13 @@ public class ContentExtractor {
 
 	public ContentExtractor(String path){
 		map= new HashMap<Element, TagInfo>();
-		Document doc=Jsoup.parse(path);
-		this.doc=doc;
+		File input = new File(path);
+		try {
+			doc=Jsoup.parse(input, null);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			System.out.println("File parsing failed");
+		}
 		
 	}
 
