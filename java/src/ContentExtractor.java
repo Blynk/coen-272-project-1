@@ -25,24 +25,76 @@ public class ContentExtractor {
 		this.doc=doc;
 		
 	}
-	public void countRatio(Element e,int tagCount, int textCount){
+
+	// countRatio -- called for every element of the document's body
+	// Will keep calculate text to tag ratio or density
+	// params: 	e - current node traversing
+	// 			tagCount - total tag count for a node; shows for calling parent node
+	//			textCount - total character count for a node; shows for calling parent node
+	public float countRatio(Element e,int tagCount, int textCount){
+		// local elements used per child node
+		int tempCharCount = 0;
+		int tempTagCount = 0;
+		float densitySum = 0;
 		for(Node n:e.childNodes()){
+			// found an HTML tag
 			if(n instanceof Element){
+				// increase tag count by one
 				int tmp=tagCount+1;
-				countRatio((Element)n, tmp, textCount);
-			}else if(n instanceof TextNode){
+				tempTagCount++;
+				// recursively search the HTML tag for nested tags
+				densitySum = countRatio((Element)n, tmp, textCount);
+			}else if(n instanceof TextNode){ // Otherwise, we found text
 				String text=((TextNode)n).text();
-				textCount+=text.length();
+				textCount+=text.length(); // get the number of text characters
+				tempCharCount += text.length();
 			}else{
-				
+				// Else we don't know what this is, ignore
+				continue;
 			}
 		}
+		// If tagCount == 0, division will be undefined; set to 1
+		if(tempTagCount == 0)
+			tempTagCount = 1;
+		return densitySum = (float) tempCharCount/ (float) tempTagCount;
+	}
+
+	public float findMinDS(Element element, float currentMin){
+		float minDS = currentMin;
+		float tempMin = currentMin;
+		int tags = 0;
+		int chars = 0;
+
+		for(Node n : element.childNodes()){
+			if(n instanceof Element) {
+				tags++;
+				tempMin = findMinDS((Element) n, minDS);
+			}
+			else if(n instanceof TextNode) {
+				String text = ((TextNode) n).text();
+				chars = text.length();
+			}
+			else
+				continue;
+
+			if(tempMin < minDS)
+				minDS = tempMin;
+		}
+
+		if(tags == 0)
+			tags = 1;
+		return (float)chars/(float)tags;
 	}
 	 
 	public void bodyProcessor(){	
-		
+
+		float densitySumMax = -100;
+		float tempMax;
+		Element maxDSElement = null;
+
 		doc.select("*:matchesOwn((?is) )").remove(); //remove &nbsp;
-		doc.select("script,noscript,style,iframe,br,a,nav").remove(); 
+		// preprocess page by removing the extraneous tags
+		doc.select("script,noscript,style,iframe,br,a,nav").remove();
 		
 		elements=doc.body().select("*");
 		
@@ -51,37 +103,31 @@ public class ContentExtractor {
 			textCount=0;
 			Element e=elements.get(i);
 			TagInfo taginfo= new TagInfo(e);
-			countRatio(e, tagCount, textCount);
+			tempMax = countRatio(e, tagCount, textCount);
+			if(tempMax > densitySumMax) {
+				densitySumMax = tempMax;
+				maxDSElement = e;
+			}
+			if(tagCount == 0)
+				tagCount = 1;
 			taginfo.setTag(tagCount);
 			taginfo.setLength(textCount);
 			taginfo.setPos(i);
 			map.put(e, taginfo);
-//			String context=elements.get(i).text();
-//			taginfo.setContent(context);//difference between ownText() and text()?
-//			int len=context.length();
-//			taginfo.setLength(len);
-//			taginfo.position=i;
-//			if(map.containsKey(tag)){
-//				ArrayList<TagInfo> arr= map.get(tag);
-//				arr.add(taginfo);
-//				map.put(tag, arr);
-//			}else{
-//				ArrayList<TagInfo> arr=new ArrayList<TagInfo>();
-//				arr.add(taginfo);
-//				map.put(tag, arr);
-//			}
-			
 		}
-		removeNoise();
+		float minDSThreshold = findMinDS(maxDSElement, densitySumMax);
+
+		removeNoise(minDSThreshold);
 		finalContent();
 	}
-	void removeNoise(){
+
+	void removeNoise(float threshold){
 		//TODO: remove noise based on the length of content under each tag
 		Iterator<Map.Entry<Element, TagInfo>> it=map.entrySet().iterator();
 		while(it.hasNext()){
 			Map.Entry<Element, TagInfo> pair=it.next();
 			TagInfo tmp=pair.getValue();
-			if(tmp.getLength()/tmp.getTagCount()<4){
+			if((float) tmp.getLength()/(float) tmp.getTagCount() < threshold){
 				elements.get(tmp.getPos()).remove();
 			}
 				
