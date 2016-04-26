@@ -16,6 +16,8 @@ public class ContentExtractor {
 	HashMap<Element, TagInfo> map;
 	String title;
 	Elements elements;
+	int tagCount;
+	int textCount;
 
 	public ContentExtractor(String path){
 		map= new HashMap<Element, TagInfo>();
@@ -23,7 +25,7 @@ public class ContentExtractor {
 		this.doc=doc;
 		
 	}
-	public void countRatio(Element e, int tagCount, int textCount){
+	public void countRatio(Element e,int tagCount, int textCount){
 		for(Node n:e.childNodes()){
 			if(n instanceof Element){
 				int tmp=tagCount+1;
@@ -45,8 +47,8 @@ public class ContentExtractor {
 		elements=doc.body().select("*");
 		
 		for(int i=0;i<elements.size();i++){
-			int tagCount=0;
-			int textCount=0;
+			tagCount=0;
+			textCount=0;
 			Element e=elements.get(i);
 			TagInfo taginfo= new TagInfo(e);
 			countRatio(e, tagCount, textCount);
