@@ -25,7 +25,7 @@ public class ContentExtractor {
 		map= new HashMap<Element, TagInfo>();
 		File input = new File(path);
 		try {
-			doc=Jsoup.parse(input, null);
+			doc=Jsoup.parse(input, "UTF-8");
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			System.out.println("File parsing failed");
@@ -35,56 +35,43 @@ public class ContentExtractor {
 
 	public TagInfo countRatio(Element e, TagInfo ti){
 
+		TagInfo childTagInfo = null;
 		for(Node n:e.childNodes()){
 			// found an HTML tag
 			if(n instanceof Element){
-				int tmp=ti.getTagCount()+1;
-				ti.setTag(tmp);
-				return countRatio((Element)n, ti);
+				// recurse upon the child tag we found
+				childTagInfo = countRatio((Element)n, ti);
+				// update current tag count w/ child's tag count + 1 (i.e. the child)
+				int tagCount = ti.getTagCount() + 1 + childTagInfo.getTagCount();
+				ti.setTag(tagCount);
+				// Update current char count w/ child's text count
+				int charCount = ti.getLength() + childTagInfo.getLength();
+				ti.setLength(charCount);
+				// Set density sum metrics for tag density comparison
+				ti.setDensitySum(tagCount, charCount);
+				ti.setChildMinDS(tagCount, charCount);
 			}else if(n instanceof TextNode){
 				String text=((TextNode)n).text();
 				int tmp =ti.getLength()+text.length();
 				ti.setLength(tmp);
-				
 			}else{
-				
+				continue;
 			}
 		}
+		// Check if there are no children tags
+		// If so, set to one. Otherwise density sum metric will fail
+		if(ti.getTagCount() == 0)
+			ti.setTag(1);
+		ti.setDensitySum(ti.getTagCount(), ti.getLength());
+		ti.setChildMinDS(ti.getTagCount(), ti.getLength());
 		return ti;
 	}
 
-	public float findMinDS(Element element, float currentMin){
-		float minDS = currentMin;
-		float tempMin = currentMin;
-		int tags = 0;
-		int chars = 0;
-
-		for(Node n : element.childNodes()){
-			if(n instanceof Element) {
-				tags++;
-				tempMin = findMinDS((Element) n, minDS);
-			}
-			else if(n instanceof TextNode) {
-				String text = ((TextNode) n).text();
-				chars = text.length();
-			}
-			else
-				continue;
-
-			if(tempMin < minDS)
-				minDS = tempMin;
-		}
-
-		if(tags == 0)
-			tags = 1;
-		return (float)chars/(float)tags;
-	}
-	 
 	public void bodyProcessor(){	
 
 		float densitySumMax = -100;
 		float tempMax;
-		Element maxDSElement = null;
+		TagInfo maxDSElement = null;
 
 		doc.select("*:matchesOwn((?is) )").remove(); //remove &nbsp;
 		// preprocess page by removing the extraneous tags
@@ -97,16 +84,19 @@ public class ContentExtractor {
 			Element e=elements.get(i);
 			TagInfo taginfo= new TagInfo(e);
 			taginfo=countRatio(e, taginfo);
+			if(densitySumMax < taginfo.getDensitySum()) {
+				densitySumMax = taginfo.getDensitySum();
+				maxDSElement = taginfo;
+			}
 			taginfo.setPos(i);
 			map.put(e, taginfo);
 		}
-		float minDSThreshold = findMinDS(maxDSElement, densitySumMax);
 
-		removeNoise(minDSThreshold);
-		// finalContent();
+		removeNoise(maxDSElement.getChildMinDS());
+		finalContent();
 	}
 
-	void removeNoise(float threshold){
+	void removeNoise(Float threshold){
 		//TODO: remove noise based on the length of content under each tag
 		Iterator<Map.Entry<Element, TagInfo>> it=map.entrySet().iterator();
 		while(it.hasNext()){
@@ -125,6 +115,9 @@ public class ContentExtractor {
 	}
 	void finalContent(){
 		//TODO: generate final text and output title and processed body to file
+		for(Element e : elements){
+			System.out.println(e.outerHtml());
+		}
 	}
 
 }
