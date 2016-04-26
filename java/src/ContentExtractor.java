@@ -16,8 +16,8 @@ public class ContentExtractor {
 	HashMap<Element, TagInfo> map;
 	String title;
 	Elements elements;
-	int tagCount;
-	int textCount;
+//	int tagCount;
+//	int textCount;
 
 	public ContentExtractor(String path){
 		map= new HashMap<Element, TagInfo>();
@@ -25,18 +25,22 @@ public class ContentExtractor {
 		this.doc=doc;
 		
 	}
-	public void countRatio(Element e,int tagCount, int textCount){
+	public TagInfo countRatio(Element e, TagInfo ti){
 		for(Node n:e.childNodes()){
 			if(n instanceof Element){
-				int tmp=tagCount+1;
-				countRatio((Element)n, tmp, textCount);
+				int tmp=ti.getTagCount()+1;
+				ti.setTag(tmp);
+				return countRatio((Element)n, ti);
 			}else if(n instanceof TextNode){
 				String text=((TextNode)n).text();
-				textCount+=text.length();
+				int tmp =ti.getLength()+text.length();
+				ti.setLength(tmp);
+				return ti; 
 			}else{
-				
+				return ti;
 			}
 		}
+		return ti;
 	}
 	 
 	public void bodyProcessor(){	
@@ -47,13 +51,10 @@ public class ContentExtractor {
 		elements=doc.body().select("*");
 		
 		for(int i=0;i<elements.size();i++){
-			tagCount=0;
-			textCount=0;
+
 			Element e=elements.get(i);
 			TagInfo taginfo= new TagInfo(e);
-			countRatio(e, tagCount, textCount);
-			taginfo.setTag(tagCount);
-			taginfo.setLength(textCount);
+			taginfo=countRatio(e, taginfo);
 			taginfo.setPos(i);
 			map.put(e, taginfo);
 //			String context=elements.get(i).text();
@@ -73,7 +74,7 @@ public class ContentExtractor {
 			
 		}
 		removeNoise();
-		finalContent();
+		// finalContent();
 	}
 	void removeNoise(){
 		//TODO: remove noise based on the length of content under each tag
