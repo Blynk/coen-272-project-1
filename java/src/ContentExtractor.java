@@ -45,9 +45,9 @@ public class ContentExtractor {
 				String text=((TextNode)n).text();
 				int tmp =ti.getLength()+text.length();
 				ti.setLength(tmp);
-				return ti;
+				
 			}else{
-				return ti;
+				
 			}
 		}
 		return ti;
