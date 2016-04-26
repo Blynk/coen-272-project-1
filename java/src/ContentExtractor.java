@@ -1,4 +1,3 @@
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -6,47 +5,69 @@ import java.util.Map;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import org.jsoup.parser.Tag;
+import org.jsoup.nodes.Node;
+import org.jsoup.nodes.TextNode;
 import org.jsoup.safety.Whitelist;
 import org.jsoup.select.Elements;
 //maybe wanna use similar method in https://github.com/CrawlScript/WebCollector/blob/master/WebCollector/src/main/java/cn/edu/hfut/dmic/contentextractor/ContentExtractor.java
 //to compute score?
 public class ContentExtractor {
 	Document doc;
-	HashMap<Tag, ArrayList<TagInfo>> map;
+	HashMap<Element, TagInfo> map;
 	String title;
 	Elements elements;
 
 	public ContentExtractor(String path){
-		map= new HashMap<Tag, ArrayList<TagInfo>>();
+		map= new HashMap<Element, TagInfo>();
 		Document doc=Jsoup.parse(path);
 		this.doc=doc;
 		
 	}
+	public void countRatio(Element e, int tagCount, int textCount){
+		for(Node n:e.childNodes()){
+			if(n instanceof Element){
+				int tmp=tagCount+1;
+				countRatio((Element)n, tmp, textCount);
+			}else if(n instanceof TextNode){
+				String text=((TextNode)n).text();
+				textCount+=text.length();
+			}else{
+				
+			}
+		}
+	}
 	 
-	public void bodyProcessor(){		
+	public void bodyProcessor(){	
+		
 		doc.select("*:matchesOwn((?is) )").remove(); //remove &nbsp;
 		doc.select("script,noscript,style,iframe,br,a,nav").remove(); 
 		
 		elements=doc.body().select("*");
 		
 		for(int i=0;i<elements.size();i++){
-			Tag tag=elements.get(i).tag();
-			TagInfo taginfo= new TagInfo(tag);
-			String context=elements.get(i).text();
-			taginfo.setContent(context);//difference between ownText() and text()?
-			int len=context.length();
-			taginfo.setLength(len);
-			taginfo.position=i;
-			if(map.containsKey(tag)){
-				ArrayList<TagInfo> arr= map.get(tag);
-				arr.add(taginfo);
-				map.put(tag, arr);
-			}else{
-				ArrayList<TagInfo> arr=new ArrayList<TagInfo>();
-				arr.add(taginfo);
-				map.put(tag, arr);
-			}
+			int tagCount=0;
+			int textCount=0;
+			Element e=elements.get(i);
+			TagInfo taginfo= new TagInfo(e);
+			countRatio(e, tagCount, textCount);
+			taginfo.setTag(tagCount);
+			taginfo.setLength(textCount);
+			taginfo.setPos(i);
+			map.put(e, taginfo);
+//			String context=elements.get(i).text();
+//			taginfo.setContent(context);//difference between ownText() and text()?
+//			int len=context.length();
+//			taginfo.setLength(len);
+//			taginfo.position=i;
+//			if(map.containsKey(tag)){
+//				ArrayList<TagInfo> arr= map.get(tag);
+//				arr.add(taginfo);
+//				map.put(tag, arr);
+//			}else{
+//				ArrayList<TagInfo> arr=new ArrayList<TagInfo>();
+//				arr.add(taginfo);
+//				map.put(tag, arr);
+//			}
 			
 		}
 		removeNoise();
@@ -54,16 +75,15 @@ public class ContentExtractor {
 	}
 	void removeNoise(){
 		//TODO: remove noise based on the length of content under each tag
-		Iterator<Map.Entry<Tag, ArrayList<TagInfo>>> it=map.entrySet().iterator();
+		Iterator<Map.Entry<Element, TagInfo>> it=map.entrySet().iterator();
 		while(it.hasNext()){
-			Map.Entry<Tag, ArrayList<TagInfo>> pair=it.next();
-			ArrayList<TagInfo> arr=pair.getValue();
-			for(TagInfo entry:arr){
-				if(entry.getLength()<4){ //just come up with this number, need more discuss on that
-					int index=entry.getPos();
-					elements.get(index).remove();
-				}
+			Map.Entry<Element, TagInfo> pair=it.next();
+			TagInfo tmp=pair.getValue();
+			if(tmp.getLength()/tmp.getTagCount()<4){
+				elements.get(tmp.getPos()).remove();
 			}
+				
+			
 		}
 //		String html = doc.html();
 //		String clean=Jsoup.clean(html, Whitelist.basic());
