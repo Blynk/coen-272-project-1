@@ -2,9 +2,12 @@ import com.hp.gagawa.java.elements.*;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.file.*;
 
 
@@ -28,7 +31,6 @@ public class OutputWriter {
         this.docStore = Paths.get(toDir.toString(), "HTMLDocStore");
         constructHTML();
         if(Files.exists(this.docStore, LinkOption.NOFOLLOW_LINKS))
-
             return;
         try {
             Files.createDirectory(this.docStore);
@@ -118,6 +120,31 @@ public class OutputWriter {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public static void cleanWriter(Elements elements, String title){
+        Path toDir = Paths.get("").toAbsolutePath();
+        Path cleanStore = Paths.get(toDir.toString(), "CleanedHTML");
+        if(!Files.exists(cleanStore, LinkOption.NOFOLLOW_LINKS)) {
+            try {
+                Files.createDirectory(cleanStore);
+            } catch (FileAlreadyExistsException fe) {
+                fe.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        Path newCleanFile = Paths.get(cleanStore.toString(), title + ".html");
+        try (BufferedWriter writer = Files.newBufferedWriter(newCleanFile, Charset.forName("UTF-8"),
+                StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
+            for(Element e : elements) {
+                String cleanHTML = e.outerHtml();
+                writer.write(cleanHTML, 0,cleanHTML.length());
+            }
+        } catch (IOException x) {
+            System.err.format("IOException: %s%n", x);
+        }
+        System.out.println("Stored page: " + title + " in: " + newCleanFile.toString());
     }
 
 }

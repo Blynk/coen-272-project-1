@@ -30,7 +30,7 @@ public class ContentExtractor {
 			// TODO Auto-generated catch block
 			System.out.println("File parsing failed");
 		}
-		
+		title = doc.title();
 	}
 
 	public TagInfo countRatio(Element e, TagInfo ti){
@@ -76,8 +76,14 @@ public class ContentExtractor {
 		doc.select("*:matchesOwn((?is) )").remove(); //remove &nbsp;
 		// preprocess page by removing the extraneous tags
 		doc.select("script,noscript,style,iframe,br,a,nav").remove();
-		
+
+		if(title == "Gmail")
+			System.out.println(doc.outerHtml());
+
 		elements=doc.body().select("*");
+		if(title == "Gmail")
+			for(Element e : elements)
+				System.out.println(e.outerHtml());
 		
 		for(int i=0;i<elements.size();i++){
 
@@ -115,9 +121,7 @@ public class ContentExtractor {
 	}
 	void finalContent(){
 		//TODO: generate final text and output title and processed body to file
-		for(Element e : elements){
-			System.out.println(e.outerHtml());
-		}
+		OutputWriter.cleanWriter(elements, title);
 	}
 
 }

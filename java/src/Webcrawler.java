@@ -189,11 +189,11 @@ public class Webcrawler {
     public void addURLs(Elements elements) {
         int URLsAdded = 0;
         for(Element link : elements){
-            String newLink = link.attr("href");
+            String newLink = link.attr("abs:href");
             if(domainSet && !newLink.contains(domain)){
                 continue;
             }
-            if(!oldURLs.contains(newLink)){
+            if(!oldURLs.containsKey(newLink)){
                 newURLs.add(newLink);
                 URLsAdded++;
             }
@@ -215,6 +215,10 @@ public class Webcrawler {
                 URL location = new URL(loc);
                 String hostUrl = location.getProtocol();
                 hostUrl += "://" + location.getHost();
+                if(hostUrl != null && hostUrl.length() > 0 && hostUrl.charAt(hostUrl.length()-1)=='/')
+                    hostUrl = hostUrl.substring(0, hostUrl.length()-1);
+
+                System.out.println("URL on deck: " + hostUrl);
                 // Check if the robots.txt has been parsed for rules
                 if(!disallowedLists.containsKey(hostUrl)){
                     // If not, we parse for rules and add to the list
@@ -232,7 +236,7 @@ public class Webcrawler {
                 // We need to wait for a small amount of time before continuing
                 // Otherwise, another web server will serve us
                 if(newURLs.peek().contains(hostUrl)) {
-                    TimeUnit.SECONDS.sleep(10);        // Wait for 10 seconds to
+                    TimeUnit.SECONDS.sleep(5);        // Wait for 10 seconds to
                 }
             } catch (MalformedURLException e) {
                 e.printStackTrace();
