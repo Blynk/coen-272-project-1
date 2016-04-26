@@ -10,10 +10,10 @@ public class TagInfo {
 	
 	public TagInfo(Element e){
 		this.e=e;
+		tag=0;
+		len=0;
 	}
-//	void setContent(String content){
-//		this.content=content;
-//	}
+
 	void setLength(int len){
 		this.len=len;
 	}
