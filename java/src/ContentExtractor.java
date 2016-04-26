@@ -16,8 +16,8 @@ public class ContentExtractor {
 	HashMap<Element, TagInfo> map;
 	String title;
 	Elements elements;
-	int tagCount;
-	int textCount;
+//	int tagCount;
+//	int textCount;
 
 	public ContentExtractor(String path){
 		map= new HashMap<Element, TagInfo>();
@@ -26,37 +26,24 @@ public class ContentExtractor {
 		
 	}
 
-	// countRatio -- called for every element of the document's body
-	// Will keep calculate text to tag ratio or density
-	// params: 	e - current node traversing
-	// 			tagCount - total tag count for a node; shows for calling parent node
-	//			textCount - total character count for a node; shows for calling parent node
-	public float countRatio(Element e,int tagCount, int textCount){
-		// local elements used per child node
-		int tempCharCount = 0;
-		int tempTagCount = 0;
-		float densitySum = 0;
+	public TagInfo countRatio(Element e, TagInfo ti){
+
 		for(Node n:e.childNodes()){
 			// found an HTML tag
 			if(n instanceof Element){
-				// increase tag count by one
-				int tmp=tagCount+1;
-				tempTagCount++;
-				// recursively search the HTML tag for nested tags
-				densitySum = countRatio((Element)n, tmp, textCount);
-			}else if(n instanceof TextNode){ // Otherwise, we found text
+				int tmp=ti.getTagCount()+1;
+				ti.setTag(tmp);
+				return countRatio((Element)n, ti);
+			}else if(n instanceof TextNode){
 				String text=((TextNode)n).text();
-				textCount+=text.length(); // get the number of text characters
-				tempCharCount += text.length();
+				int tmp =ti.getLength()+text.length();
+				ti.setLength(tmp);
+				return ti;
 			}else{
-				// Else we don't know what this is, ignore
-				continue;
+				return ti;
 			}
 		}
-		// If tagCount == 0, division will be undefined; set to 1
-		if(tempTagCount == 0)
-			tempTagCount = 1;
-		return densitySum = (float) tempCharCount/ (float) tempTagCount;
+		return ti;
 	}
 
 	public float findMinDS(Element element, float currentMin){
@@ -99,26 +86,17 @@ public class ContentExtractor {
 		elements=doc.body().select("*");
 		
 		for(int i=0;i<elements.size();i++){
-			tagCount=0;
-			textCount=0;
+
 			Element e=elements.get(i);
 			TagInfo taginfo= new TagInfo(e);
-			tempMax = countRatio(e, tagCount, textCount);
-			if(tempMax > densitySumMax) {
-				densitySumMax = tempMax;
-				maxDSElement = e;
-			}
-			if(tagCount == 0)
-				tagCount = 1;
-			taginfo.setTag(tagCount);
-			taginfo.setLength(textCount);
+			taginfo=countRatio(e, taginfo);
 			taginfo.setPos(i);
 			map.put(e, taginfo);
 		}
 		float minDSThreshold = findMinDS(maxDSElement, densitySumMax);
 
 		removeNoise(minDSThreshold);
-		finalContent();
+		// finalContent();
 	}
 
 	void removeNoise(float threshold){
