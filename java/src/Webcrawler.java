@@ -265,8 +265,10 @@ public class Webcrawler {
                         continue;
                     }
                 }
-                else
+                else {
                     i--; // We are not allowed to parse this page -- go to the next page
+                    continue;
+                }
                 // Peek at next URL in list,
                 // If the next URL has the same host,
                 // We need to wait for a small amount of time before continuing
@@ -286,5 +288,14 @@ public class Webcrawler {
                 e.printStackTrace();
             }
         }
+    }
+
+    public static void main(String[] args) {
+        Webcrawler wc = new Webcrawler();
+        if(args.length == 0){
+            System.out.println("No .csv file provided\nUsage: java Webcrawler <.csv file>");
+        }
+        wc.init(wc.readArgs(args[0]));
+        wc.run();
     }
 }
