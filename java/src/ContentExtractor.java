@@ -118,7 +118,7 @@ public class ContentExtractor {
 		clean = clean.replaceAll("&nbsp", " ");
 		output(title +"\n"+clean);
 	}
-
+	
 	public void output(String res) {
 		Path dirPath = Paths.get("").toAbsolutePath();
 		dirPath = Paths.get(dirPath.toString(), "output");
@@ -126,14 +126,20 @@ public class ContentExtractor {
 			try {
 				Files.createDirectory(dirPath);
 			} catch (IOException e1) {
-				// TODO Auto-generated catch block
 				e1.printStackTrace();
 			}
 		}
 		try {
 			if(title.isEmpty())
 				return;
-			Path resPath = Paths.get(dirPath.toString() + "/" + title.replaceAll("/", "-") + ".txt");
+
+			String filename = Paths.get(doc.location())
+					.getFileName()
+					.toString();
+			Path resPath = Paths.get(dirPath.toString() + "/" + filename
+					.replaceFirst("^(http://www\\.|http://|www\\.)","")
+					.replaceAll("/", "-")
+					.substring(0, filename.length()-5) + ".txt");
 			//Files.createFile(resPath);
 			Files.write(resPath, res.getBytes(), StandardOpenOption.CREATE);
 		} catch (IOException e) {
