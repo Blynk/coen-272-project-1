@@ -34,38 +34,30 @@ public class ContentExtractor {
 		title = Paths.get(doc.location()).getFileName().toString();
 	}
 
-	public TagInfo countRatio(Element e, TagInfo ti){
+	public int countTags(Element e){
+		return e.children().size() > 0 ? e.children().size() : 1;
+	}
 
-		TagInfo childTagInfo = null;
-		for(Node n:e.childNodes()){
-			// found an HTML tag
-			if(n instanceof Element){
-				// recurse upon the child tag we found
-				childTagInfo = countRatio((Element)n, ti);
-				// update current tag count w/ child's tag count + 1 (i.e. the child)
-				int tagCount = ti.getTagCount() + 1 + childTagInfo.getTagCount();
-				ti.setTag(tagCount);
-				// Update current char count w/ child's text count
-				int charCount = ti.getLength() + childTagInfo.getLength();
-				ti.setLength(charCount);
-				// Set density sum metrics for tag density comparison
-				ti.setDensitySum(tagCount, charCount);
-				ti.setChildMinDS(tagCount, charCount);
-			}else if(n instanceof TextNode){
-				String text=((TextNode)n).text();
-				int tmp =ti.getLength()+text.length();
-				ti.setLength(tmp);
-			}else{
-				continue;
-			}
+	public int countChars(Element e){
+		int totalChars = 0;
+		for(TextNode tn : e.textNodes())
+			totalChars += tn.text().length();
+		return totalChars;
+	}
+
+	public TagInfo countRatio(Element e){
+
+		TagInfo thisTag = new TagInfo(e);
+		for(Node n:e.children()){
+			TagInfo childTag = countRatio((Element) n);
+			thisTag.setLength(thisTag.getLength() + childTag.getLength());
 		}
-		// Check if there are no children tags
-		// If so, set to one. Otherwise density sum metric will fail
-		if(ti.getTagCount() == 0)
-			ti.setTag(1);
-		ti.setDensitySum(ti.getTagCount(), ti.getLength());
-		ti.setChildMinDS(ti.getTagCount(), ti.getLength());
-		return ti;
+		thisTag.setTag(countTags(e));
+		if(thisTag.getTagCount() == 0)
+			thisTag.setTag(1);
+		thisTag.setLength(thisTag.getLength() + countChars(e));
+
+		return thisTag;
 	}
 
 	public void bodyProcessor(){	
@@ -74,7 +66,7 @@ public class ContentExtractor {
 		float tempMax;
 		TagInfo maxDSElement = null;
 
-		doc.select("*:matchesOwn((?is) )").remove(); //remove &nbsp;
+		//doc.select("*:matchesOwn((?is) )").remove(); //remove &nbsp;
 		// preprocess page by removing the extraneous tags
 		doc.select("script,noscript,style,iframe,br,a,nav,img,footer").remove();
 
@@ -83,8 +75,7 @@ public class ContentExtractor {
 		for(int i=0;i<elements.size();i++){
 
 			Element e=elements.get(i);
-			TagInfo taginfo= new TagInfo(e);
-			taginfo=countRatio(e, taginfo);
+			TagInfo taginfo=countRatio(e);
 			//if(densitySumMax < taginfo.getDensitySum()) {
 			//	densitySumMax = taginfo.getDensitySum();
 			//	maxDSElement = taginfo;
@@ -101,12 +92,10 @@ public class ContentExtractor {
 
 	void removeNoise(){
 		//TODO: remove noise based on the length of content under each tag
-		Iterator<Map.Entry<Element, TagInfo>> it=map.entrySet().iterator();
-		while(it.hasNext()){
-			Map.Entry<Element, TagInfo> pair=it.next();
-			TagInfo tmp=pair.getValue();
+		for(Map.Entry<Element, TagInfo> t : map.entrySet()){
+			TagInfo tmp= t.getValue();
 			// # chars / # of tags < 1 ==>
-			if((float) tmp.getLength()/(float) tmp.getTagCount() < 0.25){
+			if((float) tmp.getLength()/(float) tmp.getTagCount() < 0.1){
 				elements.get(tmp.getPos()).remove();
 			}
 				
