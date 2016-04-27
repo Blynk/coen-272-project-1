@@ -19,7 +19,7 @@ public class Webcrawler {
     private String domain;
     private boolean domainSet;
     private OutputWriter outputWriter;
-    private Hashtable<String, ArrayList<String>> disallowedLists;
+    private HashMap<String, ArrayList<String>> disallowedLists;
 
 
     //Function: Initialization of all class variables
@@ -28,7 +28,7 @@ public class Webcrawler {
     public void init(String [] args){
         this.newURLs = new ArrayDeque<>();
         this.oldURLs = new Hashtable<>();
-        this.disallowedLists = new Hashtable<>();
+        this.disallowedLists = new HashMap<>();
         this.outputWriter = new OutputWriter();
 
         if(args.length < 2){
@@ -165,18 +165,28 @@ public class Webcrawler {
             this.disallowedLists.put(hostUrl, disallows);
             System.out.println(numRules + " Rules added for: " + hostUrl);
         } catch (MalformedURLException e) {
-            e.printStackTrace();
+            ArrayList<String> temp = new ArrayList<>();
+            temp.add(hostUrl);
+            this.disallowedLists.put(hostUrl, temp);
             // Not able to resolve robots.txt -- do not parse
             return;
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (FileNotFoundException fe) {
             // No robots.txt found -- Ok.
+            this.disallowedLists.put(hostUrl, null);
+        } catch (IOException e) {
+            ArrayList<String> temp = new ArrayList<>();
+            temp.add(hostUrl);
+            this.disallowedLists.put(hostUrl, temp);
+            // 4xx -- do not parse
             return;
         }
     }
 
     public boolean checkRobots(String location, String host){
         ArrayList<String> ruleList = disallowedLists.get(host);
+        // If no robots.txt -- we're free to do what we want
+        if(ruleList == null)
+            return true;
         for(int i=0; i<ruleList.size(); i++){
             if(location.startsWith(ruleList.get(i))){
                 return false;
@@ -197,7 +207,7 @@ public class Webcrawler {
             if(domainSet && !newLink.contains(domain)){
                 continue;
             }
-            if(!oldURLs.containsKey(newLink)){
+            if(!oldURLs.containsKey(newLink.replaceFirst("^(http://www\\.|http://|www\\.)",""))){
                 newURLs.add(newLink);
                 URLsAdded++;
             }
@@ -211,23 +221,29 @@ public class Webcrawler {
     }
 
     public void run() {
+        String loc = null;
         for (int i = 0; i<this.maxToCrawl; i++) {
             try {
                 // Remove first URL from queue
-                String loc = newURLs.poll();
+                loc = newURLs.poll();
                 if(loc == null){
                     System.out.println("No more URLs to crawl");
                     System.out.println("Pages Crawled: " + i);
                     return;
                 }
                 // Check if the URL can be resolved, then get the domain URL of the page
+                if(loc.isEmpty()){
+                    i--;
+                    continue;
+                }
                 URL location = new URL(loc);
                 String hostUrl = location.getProtocol();
                 hostUrl += "://" + location.getHost();
                 if(hostUrl != null && hostUrl.length() > 0 && hostUrl.charAt(hostUrl.length()-1)=='/')
                     hostUrl = hostUrl.substring(0, hostUrl.length()-1);
 
-                System.out.println("URL on deck: " + loc.toString());
+                System.out.println("URL: " + loc.toString());
+                System.out.println("Host: " + hostUrl);
                 // Check if the robots.txt has been parsed for rules
                 if(!disallowedLists.containsKey(hostUrl)){
                     // If not, we parse for rules and add to the list
@@ -236,8 +252,9 @@ public class Webcrawler {
                 // Check if the host allows parsing of the current page
                 if(checkRobots(loc, hostUrl)){
                     // We can parse, so add URL to list of crawled URLs
-                    if(!oldURLs.containsKey(loc)) {
-                        oldURLs.put(loc, 1);
+                    String pageName = loc.replaceFirst("^(http://www\\.|http://|www\\.)","");
+                    if(!oldURLs.containsKey(pageName)) {
+                        oldURLs.put(pageName, 1);
                         // Parse the HTML page
                         parseHTML(loc);
                     }
@@ -259,7 +276,8 @@ public class Webcrawler {
                 }
             } catch (MalformedURLException e) {
                 e.printStackTrace();
-                System.out.println("URL could not be resolved");
+                e.getMessage();
+                System.out.println("URL could not be resolved: " + loc.toString());
                 i--;
                 continue;
             } catch (IOException e) {
