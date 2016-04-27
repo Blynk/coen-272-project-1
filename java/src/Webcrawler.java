@@ -42,10 +42,11 @@ public class Webcrawler {
         } catch (MalformedURLException e) {
             e.printStackTrace();
             System.out.println("Invalid seed URL given");
+            return;
         }
 
         this.newURLs.add(args[0]);
-        this.oldURLs.put(args[0], 1);
+        //this.oldURLs.put(args[0], 1);
         this.maxToCrawl = Integer.parseInt(args[1]);
         if(args.length > 2){
             try {
@@ -190,6 +191,8 @@ public class Webcrawler {
         int URLsAdded = 0;
         for(Element link : elements){
             String newLink = link.attr("abs:href");
+            if(newLink != null && newLink.length() > 0 && newLink.charAt(newLink.length()-1)=='/')
+                newLink = newLink.substring(0, newLink.length()-1);
             if(domainSet && !newLink.contains(domain)){
                 continue;
             }
@@ -218,7 +221,7 @@ public class Webcrawler {
                 if(hostUrl != null && hostUrl.length() > 0 && hostUrl.charAt(hostUrl.length()-1)=='/')
                     hostUrl = hostUrl.substring(0, hostUrl.length()-1);
 
-                System.out.println("URL on deck: " + hostUrl);
+                System.out.println("URL on deck: " + loc.toString());
                 // Check if the robots.txt has been parsed for rules
                 if(!disallowedLists.containsKey(hostUrl)){
                     // If not, we parse for rules and add to the list
@@ -227,9 +230,13 @@ public class Webcrawler {
                 // Check if the host allows parsing of the current page
                 if(checkRobots(loc, hostUrl)){
                     // We can parse, so add URL to list of crawled URLs
-                    oldURLs.put(loc, 1);
-                    // Parse the HTML page
-                    parseHTML(loc);
+                    if(!oldURLs.containsKey(loc)) {
+                        oldURLs.put(loc, 1);
+                        // Parse the HTML page
+                        parseHTML(loc);
+                    }
+                    else
+                        i--;
                 }
                 // Peek at next URL in list,
                 // If the next URL has the same host,

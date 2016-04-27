@@ -47,7 +47,10 @@ public class OutputWriter {
     // Sanity Check: Need to set page before calling this method
     public void writeHTMLToFile() {
         String toFile = page.outerHtml();
-        Path newFile  = Paths.get(this.docStore.toString(), page.title() + ".html");
+        Path newFile  = Paths.get(this.docStore.toString(), page.location()
+                .replaceFirst("^(http://www\\.|http://|www\\.)","").replaceAll("/", "_") + ".html");
+        //if(Files.exists(newFile, LinkOption.NOFOLLOW_LINKS))
+        //    newFile = Paths.get(this.docStore.toString(), page.location() + ".html");
         try {
             Files.write(newFile, toFile.getBytes(), StandardOpenOption.CREATE_NEW);
         } catch (IOException e) {
