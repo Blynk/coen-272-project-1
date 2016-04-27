@@ -1,5 +1,6 @@
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -30,7 +31,7 @@ public class ContentExtractor {
 			// TODO Auto-generated catch block
 			System.out.println("File parsing failed");
 		}
-		title = doc.title();
+		title = Paths.get(doc.location()).getFileName().toString();
 	}
 
 	public TagInfo countRatio(Element e, TagInfo ti){
@@ -75,40 +76,37 @@ public class ContentExtractor {
 
 		doc.select("*:matchesOwn((?is) )").remove(); //remove &nbsp;
 		// preprocess page by removing the extraneous tags
-		doc.select("script,noscript,style,iframe,br,a,nav").remove();
-
-		if(title == "Gmail")
-			System.out.println(doc.outerHtml());
+		doc.select("script,noscript,style,iframe,br,a,nav,img,footer").remove();
 
 		elements=doc.body().select("*");
-		if(title == "Gmail")
-			for(Element e : elements)
-				System.out.println(e.outerHtml());
 		
 		for(int i=0;i<elements.size();i++){
 
 			Element e=elements.get(i);
 			TagInfo taginfo= new TagInfo(e);
 			taginfo=countRatio(e, taginfo);
-			if(densitySumMax < taginfo.getDensitySum()) {
-				densitySumMax = taginfo.getDensitySum();
-				maxDSElement = taginfo;
-			}
+			//if(densitySumMax < taginfo.getDensitySum()) {
+			//	densitySumMax = taginfo.getDensitySum();
+			//	maxDSElement = taginfo;
+			//}
 			taginfo.setPos(i);
 			map.put(e, taginfo);
+			//System.out.println("DS max: " + densitySumMax);
 		}
 
-		removeNoise(maxDSElement.getChildMinDS());
+		//removeNoise(maxDSElement.getChildMinDS());
+		removeNoise();
 		finalContent();
 	}
 
-	void removeNoise(Float threshold){
+	void removeNoise(){
 		//TODO: remove noise based on the length of content under each tag
 		Iterator<Map.Entry<Element, TagInfo>> it=map.entrySet().iterator();
 		while(it.hasNext()){
 			Map.Entry<Element, TagInfo> pair=it.next();
 			TagInfo tmp=pair.getValue();
-			if((float) tmp.getLength()/(float) tmp.getTagCount() < threshold){
+			// # chars / # of tags < 1 ==>
+			if((float) tmp.getLength()/(float) tmp.getTagCount() < 0.25){
 				elements.get(tmp.getPos()).remove();
 			}
 				
@@ -121,7 +119,7 @@ public class ContentExtractor {
 	}
 	void finalContent(){
 		//TODO: generate final text and output title and processed body to file
-		OutputWriter.cleanWriter(elements, title);
+		OutputWriter.cleanWriter(doc, title);
 	}
 
 }

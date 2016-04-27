@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.*;
 
+import static com.sun.tools.doclets.formats.html.markup.HtmlStyle.title;
 
 
 /**
@@ -49,9 +50,9 @@ public class OutputWriter {
     public void writeHTMLToFile() {
         String toFile = page.outerHtml();
         filepath = Paths.get(this.docStore.toString(), page.location()
-                .replaceFirst("^(http://www\\.|http://|www\\.)","").replaceAll("/", "_") + ".html");
-        //if(Files.exists(newFile, LinkOption.NOFOLLOW_LINKS))
-        //    newFile = Paths.get(this.docStore.toString(), page.location() + ".html");
+                .replaceFirst("^(http://www\\.|http://|www\\.)","").replaceAll("/", "_"));
+        if(!filepath.toString().contains(".html"))
+            filepath = Paths.get(filepath.toString() + ".html");
         try {
             Files.write(filepath, toFile.getBytes(), StandardOpenOption.CREATE_NEW);
         } catch (IOException e) {
@@ -126,7 +127,7 @@ public class OutputWriter {
         }
     }
 
-    public static void cleanWriter(Elements elements, String title){
+    public static void cleanWriter(Document doc, String title){
         Path toDir = Paths.get("").toAbsolutePath();
         Path cleanStore = Paths.get(toDir.toString(), "CleanedHTML");
         if(!Files.exists(cleanStore, LinkOption.NOFOLLOW_LINKS)) {
@@ -138,13 +139,11 @@ public class OutputWriter {
                 e.printStackTrace();
             }
         }
-        Path newCleanFile = Paths.get(cleanStore.toString(), title + ".html");
+        Path newCleanFile = Paths.get(cleanStore.toString(), title);
         try (BufferedWriter writer = Files.newBufferedWriter(newCleanFile, Charset.forName("UTF-8"),
                 StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
-            for(Element e : elements) {
-                String cleanHTML = e.outerHtml();
+                String cleanHTML = doc.outerHtml();
                 writer.write(cleanHTML, 0,cleanHTML.length());
-            }
         } catch (IOException x) {
             System.err.format("IOException: %s%n", x);
         }
