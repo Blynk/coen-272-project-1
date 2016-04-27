@@ -1,9 +1,6 @@
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
+import java.nio.file.*;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -27,7 +24,7 @@ public class ContentExtractor {
 		map= new HashMap<Element, TagInfo>();
 		File input = new File(path);
 		try {
-			doc=Jsoup.parse(input, null);
+			doc=Jsoup.parse(input, "UTF-8");
 			title = doc.title();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -122,24 +119,25 @@ public class ContentExtractor {
 		output(title +"\n"+clean);
 	}
 
-	public void output(String res){
+	public void output(String res) {
 		Path dirPath = Paths.get("").toAbsolutePath();
 		dirPath = Paths.get(dirPath.toString(), "output");
-		
-		try {
-			Path resPath = Paths.get(dirPath.toString() +"/"+ title + ".txt");
-			Files.createFile(resPath);
-			Files.write(resPath, res.getBytes(), StandardOpenOption.CREATE);
-		} catch (IOException e) {
+		if (!Files.exists(dirPath, LinkOption.NOFOLLOW_LINKS)) {
 			try {
 				Files.createDirectory(dirPath);
-				output(res);
 			} catch (IOException e1) {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
 			}
-			
+		}
+		try {
+			if(title.isEmpty())
+				return;
+			Path resPath = Paths.get(dirPath.toString() + "/" + title.replaceAll("/", "-") + ".txt");
+			//Files.createFile(resPath);
+			Files.write(resPath, res.getBytes(), StandardOpenOption.CREATE);
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
-
 }
