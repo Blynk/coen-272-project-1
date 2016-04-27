@@ -1,6 +1,9 @@
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -19,107 +22,104 @@ public class ContentExtractor {
 	HashMap<Element, TagInfo> map;
 	String title;
 	Elements elements;
-//	int tagCount;
-//	int textCount;
 
 	public ContentExtractor(String path){
 		map= new HashMap<Element, TagInfo>();
 		File input = new File(path);
 		try {
-			doc=Jsoup.parse(input, "UTF-8");
+			doc=Jsoup.parse(input, null);
+			title = doc.title();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			System.out.println("File parsing failed");
 		}
-		title = Paths.get(doc.location()).getFileName().toString();
+		
 	}
-
 	public TagInfo countRatio(Element e, TagInfo ti){
-
-		TagInfo childTagInfo = null;
 		for(Node n:e.childNodes()){
-			// found an HTML tag
 			if(n instanceof Element){
-				// recurse upon the child tag we found
-				childTagInfo = countRatio((Element)n, ti);
-				// update current tag count w/ child's tag count + 1 (i.e. the child)
-				int tagCount = ti.getTagCount() + 1 + childTagInfo.getTagCount();
-				ti.setTag(tagCount);
-				// Update current char count w/ child's text count
-				int charCount = ti.getLength() + childTagInfo.getLength();
-				ti.setLength(charCount);
-				// Set density sum metrics for tag density comparison
-				ti.setDensitySum(tagCount, charCount);
-				ti.setChildMinDS(tagCount, charCount);
+				int tmp=ti.getTagCount()+1;
+				ti.setTag(tmp);
+				ti = countRatio((Element)n, ti);
 			}else if(n instanceof TextNode){
-				String text=((TextNode)n).text();
-				int tmp =ti.getLength()+text.length();
+				String text=((TextNode)n).text().trim();
+				int tmp =ti.getLength()+text.split(" ").length;
 				ti.setLength(tmp);
-			}else{
-				continue;
 			}
 		}
-		// Check if there are no children tags
-		// If so, set to one. Otherwise density sum metric will fail
-		if(ti.getTagCount() == 0)
-			ti.setTag(1);
-		ti.setDensitySum(ti.getTagCount(), ti.getLength());
-		ti.setChildMinDS(ti.getTagCount(), ti.getLength());
 		return ti;
 	}
-
+	 
 	public void bodyProcessor(){	
-
-		float densitySumMax = -100;
-		float tempMax;
-		TagInfo maxDSElement = null;
-
-		doc.select("*:matchesOwn((?is) )").remove(); //remove &nbsp;
-		// preprocess page by removing the extraneous tags
-		doc.select("script,noscript,style,iframe,br,a,nav,img,footer").remove();
-
-		elements=doc.body().select("*");
+		
+		//doc.select("*:matchesOwn((?is) )").remove(); //remove &nbsp;
+		doc.select("script,noscript,style,iframe,br,nav, head,footer,img,header,button,input,form,a").remove(); 
+		elements=doc.body().children();
 		
 		for(int i=0;i<elements.size();i++){
 
 			Element e=elements.get(i);
 			TagInfo taginfo= new TagInfo(e);
 			taginfo=countRatio(e, taginfo);
-			//if(densitySumMax < taginfo.getDensitySum()) {
-			//	densitySumMax = taginfo.getDensitySum();
-			//	maxDSElement = taginfo;
-			//}
 			taginfo.setPos(i);
 			map.put(e, taginfo);
-			//System.out.println("DS max: " + densitySumMax);
+			
+//			String context=elements.get(i).text();
+//			taginfo.setContent(context);//difference between ownText() and text()?
+//			int len=context.length();
+//			taginfo.setLength(len);
+//			taginfo.position=i;
+//			if(map.containsKey(tag)){
+//				ArrayList<TagInfo> arr= map.get(tag);
+//				arr.add(taginfo);
+//				map.put(tag, arr);
+//			}else{
+//				ArrayList<TagInfo> arr=new ArrayList<TagInfo>();
+//				arr.add(taginfo);
+//				map.put(tag, arr);
+//			}
+			
 		}
-
-		//removeNoise(maxDSElement.getChildMinDS());
 		removeNoise();
-		finalContent();
+//		finalContent();
 	}
-
-	void removeNoise(){
+	public void removeNoise(){
 		//TODO: remove noise based on the length of content under each tag
 		Iterator<Map.Entry<Element, TagInfo>> it=map.entrySet().iterator();
 		while(it.hasNext()){
 			Map.Entry<Element, TagInfo> pair=it.next();
 			TagInfo tmp=pair.getValue();
-			// # chars / # of tags < 1 ==>
-			if((float) tmp.getLength()/(float) tmp.getTagCount() < 0.25){
+			if((double)tmp.getLength()/(double)(tmp.getTagCount()+1)<2){
 				elements.get(tmp.getPos()).remove();
-			}
-				
-			
+			}	
 		}
-//		String html = doc.html();
-//		String clean=Jsoup.clean(html, Whitelist.basic());
+		
+		String html = doc.text();
+		String clean=Jsoup.clean(html, Whitelist.basic()); 
+		clean = clean.replaceAll("&nbsp", " ");
+		//System.out.println(title);
+		output(title +"\n"+clean);
 //		//remove extra spaces
 //		clean=clean.replaceAll("&nbsp", " ");
 	}
-	void finalContent(){
-		//TODO: generate final text and output title and processed body to file
-		OutputWriter.cleanWriter(doc, title);
+	public void output(String res){
+		Path dirPath = Paths.get("").toAbsolutePath();
+		dirPath = Paths.get(dirPath.toString(), "output");
+		
+		try {
+			Path resPath = Paths.get(dirPath.toString() +"/"+ title + ".txt");
+			Files.createFile(resPath);
+			Files.write(resPath, res.getBytes(), StandardOpenOption.CREATE);
+		} catch (IOException e) {
+			try {
+				Files.createDirectory(dirPath);
+				output(res);
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+			
+		}
 	}
 
 }
