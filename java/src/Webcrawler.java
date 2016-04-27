@@ -47,7 +47,8 @@ public class Webcrawler {
 
         this.newURLs.add(args[0]);
         //this.oldURLs.put(args[0], 1);
-        this.maxToCrawl = Integer.parseInt(args[1]);
+        // max to crawl sets limit on how many pages to crawl -- minus 1 b/c seedURL is first page
+        this.maxToCrawl = Integer.parseInt(args[1]) - 1;
         if(args.length > 2){
             try {
                 URL hostDomain = new URL(args[2]);
@@ -204,6 +205,11 @@ public class Webcrawler {
         System.out.println(URLsAdded + " URLs added to the list");
     }
 
+    // I don't think this is very efficient, but hopefully it doesn't get called too often.
+    public void cleanURLs(){
+        newURLs.removeAll(oldURLs.keySet());
+    }
+
     public void run() {
         for (int i = 0; i<this.maxToCrawl; i++) {
             try {
@@ -235,15 +241,21 @@ public class Webcrawler {
                         // Parse the HTML page
                         parseHTML(loc);
                     }
-                    else
+                    else {
+                        // we ran into a collision here w/ a old URL
+                        cleanURLs(); // Remove all oldURLs from frontier
                         i--;
+                        continue;
+                    }
                 }
+                else
+                    i--; // We are not allowed to parse this page -- go to the next page
                 // Peek at next URL in list,
                 // If the next URL has the same host,
                 // We need to wait for a small amount of time before continuing
                 // Otherwise, another web server will serve us
                 if(newURLs.peek().contains(hostUrl)) {
-                    TimeUnit.SECONDS.sleep(5);        // Wait for 10 seconds to
+                    TimeUnit.SECONDS.sleep(5);        // Wait for a couple of seconds
                 }
             } catch (MalformedURLException e) {
                 e.printStackTrace();

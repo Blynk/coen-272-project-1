@@ -20,6 +20,7 @@ public class OutputWriter {
     Document page;
     Path docStore;
     Path reportPath;
+    Path filepath;
 
     public void setPage(Document d){
         this.page = d;
@@ -47,16 +48,16 @@ public class OutputWriter {
     // Sanity Check: Need to set page before calling this method
     public void writeHTMLToFile() {
         String toFile = page.outerHtml();
-        Path newFile  = Paths.get(this.docStore.toString(), page.location()
+        filepath = Paths.get(this.docStore.toString(), page.location()
                 .replaceFirst("^(http://www\\.|http://|www\\.)","").replaceAll("/", "_") + ".html");
         //if(Files.exists(newFile, LinkOption.NOFOLLOW_LINKS))
         //    newFile = Paths.get(this.docStore.toString(), page.location() + ".html");
         try {
-            Files.write(newFile, toFile.getBytes(), StandardOpenOption.CREATE_NEW);
+            Files.write(filepath, toFile.getBytes(), StandardOpenOption.CREATE_NEW);
         } catch (IOException e) {
             e.printStackTrace();
         }
-        System.out.println("Stored page: " + page.title() + " in: " + newFile.toString());
+        System.out.println("Stored page: " + page.title() + " in: " + filepath.toString());
     }
 
     // Initializes report.html w/ proper opening and closing tags
@@ -100,7 +101,7 @@ public class OutputWriter {
             reportDoc = Jsoup.parse(reportFile, "UTF-8");
             Element bodyDiv = reportDoc.select("div").first();
             bodyDiv.append("<h1><a href="+ page.location() + ">" + page.title() +"</a></h1>");
-            bodyDiv.append("<p>Cached Version: <a href="+ docStore + "/" +page.title() + ".html>" + page.title() + "</a></p>");
+            bodyDiv.append("<p>Cached Version: <a href="+ filepath +">" + page.title() + "</a></p>");
             bodyDiv.append("<p>Number of Links: " + nLinks + "</p>");
             bodyDiv.append("<p>Number of Images: " + nImgs + "</p>");
 
