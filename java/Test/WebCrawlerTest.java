@@ -7,7 +7,7 @@ public class WebCrawlerTest {
         Webcrawler wc = new Webcrawler();
 
         //@TODO: Need to test parsing .csv file
-        wc.init(new String[]{"http://www.google.com", "5"});
+        wc.init(new String[]{"http://www.cnn.com", "100"});
         wc.run();
     }
 }
