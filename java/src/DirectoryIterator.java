@@ -19,4 +19,16 @@ public class DirectoryIterator {
         }
         return docFileList;
     }
+
+    public static ArrayList<Path> getTextFiles(Path textDir){
+        ArrayList<Path> docFileList = new ArrayList<>();
+        try(DirectoryStream<Path> stream = Files.newDirectoryStream(textDir, "*.txt")) {
+            for(Path entry : stream){
+                docFileList.add(entry.getFileName());
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return docFileList;
+    }
 }

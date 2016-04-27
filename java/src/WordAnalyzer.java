@@ -24,12 +24,12 @@ public class WordAnalyzer {
 
     public WordAnalyzer(){
         this.docStore = Paths.get("").toAbsolutePath();
-        this.docStore = Paths.get(this.docStore.toString(), "HTMLDocStore");
+        this.docStore = Paths.get(this.docStore.toString(), "output");
         this.wordCount = new HashMap<>();
         this.docStoreList = DirectoryIterator.getHTMLFiles(this.docStore);
     }
 
-    public void parseDocument(Path htmldoc){
+    public void parseHTMLDocument(Path htmldoc){
         File currentPage = new File(htmldoc.toString());
         try {
             Document doc = Jsoup.parse(currentPage, "UTF-8");
@@ -52,6 +52,27 @@ public class WordAnalyzer {
             e.printStackTrace();
         }
 
+    }
+
+    public void parseTextDocument(Path textDoc){
+        Charset charset = Charset.forName("UTF-8");
+        try (BufferedReader reader = Files.newBufferedReader(textDoc, charset)) {
+            String line = null;
+            while ((line = reader.readLine()) != null) {
+                String [] words = line.replaceAll("\\p{P}", "").toLowerCase().split("\\s+");
+                for(String w : words){
+                    Integer count = this.wordCount.get(w);
+                    if (count == null) {
+                        wordCount.put(w, 1);
+                    }
+                    else {
+                        wordCount.put(w, count + 1);
+                    }
+                }
+            }
+        } catch (IOException x) {
+            System.err.format("IOException: %s%n", x);
+        }
     }
 
     // Sorting a hashmap based on values; creates a descending list
@@ -114,7 +135,7 @@ public class WordAnalyzer {
 
     public void run(){
         for(Path p : docStoreList){
-            parseDocument(Paths.get(this.docStore.toString(), p.toString()));
+            parseTextDocument(Paths.get(this.docStore.toString(), p.toString()));
         }
         writeStatistics(getWordCount());
     }
