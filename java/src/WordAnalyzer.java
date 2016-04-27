@@ -26,7 +26,7 @@ public class WordAnalyzer {
         this.docStore = Paths.get("").toAbsolutePath();
         this.docStore = Paths.get(this.docStore.toString(), "output");
         this.wordCount = new HashMap<>();
-        this.docStoreList = DirectoryIterator.getHTMLFiles(this.docStore);
+        this.docStoreList = DirectoryIterator.getTextFiles(this.docStore);
     }
 
     public void parseHTMLDocument(Path htmldoc){
@@ -138,5 +138,10 @@ public class WordAnalyzer {
             parseTextDocument(Paths.get(this.docStore.toString(), p.toString()));
         }
         writeStatistics(getWordCount());
+    }
+
+    public static void main(String[] args) {
+        WordAnalyzer wa = new WordAnalyzer();
+        wa.run();
     }
 }

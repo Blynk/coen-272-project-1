@@ -118,7 +118,7 @@ public class ContentExtractor {
 		clean = clean.replaceAll("&nbsp", " ");
 		output(title +"\n"+clean);
 	}
-	
+
 	public void output(String res) {
 		Path dirPath = Paths.get("").toAbsolutePath();
 		dirPath = Paths.get(dirPath.toString(), "output");
